@@ -20,7 +20,8 @@ type NewsShortDetailed struct {
 
 //comments model
 type Comment struct {
-	Id      int
-	PostId  int    //Post that comment is connected to
-	Content string //comment itself
+	Id         int
+	PostId     int    //Post that comment is connected to
+	Content    string //comment itself
+	AuthorName string //who send comment
 }

@@ -1,6 +1,9 @@
 package api
 
 import (
+	"ApiGate/package/models"
+	"math/rand"
+
 	"encoding/json"
 	"net/http"
 
@@ -38,7 +41,7 @@ func (api *API) endpoints() {
 	api.r.HandleFunc("/comments/", api.addcomment).Methods(http.MethodPost, http.MethodOptions)
 
 	// html web server
-	//api.r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir(api.hp+"/webapp"))))
+	api.r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir(api.hp+"/webapp"))))
 
 }
 
@@ -62,7 +65,17 @@ func (api *API) filterposts(w http.ResponseWriter, r *http.Request) {
 	}
 	filter := mux.Vars(r)["filter"]
 	_ = filter
-	json.NewEncoder(w).Encode("")
+
+	res := []models.NewsShortDetailed{
+		{
+			Id:      0,
+			Title:   "Test",
+			PubTime: 0,
+			Link:    "http://localhost:8080/",
+		},
+	}
+
+	json.NewEncoder(w).Encode(res)
 }
 
 // GET /news/{id} - returns post by id
@@ -79,11 +92,33 @@ func (api *API) post(w http.ResponseWriter, r *http.Request) {
 
 // POST /comments/ - adds comment
 func (api *API) addcomment(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	if r.Method == http.MethodOptions {
 		return
 	}
+	decoder := json.NewDecoder(r.Body)
+	defer r.Body.Close()
 
+	var c models.Comment
+	if err := decoder.Decode(&c); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	c.Id = rand.Intn(99) + 1
+
+	respondWithJSON(w, http.StatusAccepted, c)
 	//json.NewEncoder(w).Encode(&post)
+}
+
+func respondWithError(w http.ResponseWriter, code int, message string) {
+	respondWithJSON(w, code, map[string]string{"error": message})
+}
+
+func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
+	response, _ := json.Marshal(payload)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	w.Write(response)
 }
