@@ -11,7 +11,7 @@ import (
 type API struct {
 	r  *mux.Router
 	hp string //home path
-	c  commentsApi
+	//c  CommentsApi
 	n  newsApi
 	db *storage.DB
 }
@@ -19,7 +19,7 @@ type API struct {
 // constructor of API
 func New(db *storage.DB, homepath string) *API {
 	a := API{r: mux.NewRouter(), hp: homepath, db: db}
-	a.c = commentsApi{}
+	//a.c = CommentsApi{}
 	a.r.StrictSlash(true)
 	a.endpoints()
 	return &a
@@ -32,8 +32,8 @@ func (api *API) Router() *mux.Router {
 
 // register endpoints
 func (api *API) endpoints() {
-	fmt.Println("adding comments routes")
-	api.c.addRoutes(api.r, api.db)
+	//fmt.Println("adding comments routes")
+	//api.c.addRoutes(api.r, api.db)
 	fmt.Println("adding news routes")
 	api.n.addRoutes(api.r)
 	// html web server

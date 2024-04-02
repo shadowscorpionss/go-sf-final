@@ -11,11 +11,25 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type commentsApi struct {
+type CommentsApi struct {
 	db *storage.DB
+	r  *mux.Router
 }
 
-func (c *commentsApi) addRoutes(r *mux.Router, db *storage.DB) {
+func NewCommentsApi(db *storage.DB) *CommentsApi {
+	// constructor of API
+	a := CommentsApi{r: mux.NewRouter(), db: db}
+	a.r.StrictSlash(true)
+	a.addRoutes(a.r, db)
+	return &a
+}
+
+// returns router for HTTP Server
+func (c *CommentsApi) Router() *mux.Router {
+	return c.r
+}
+
+func (c *CommentsApi) addRoutes(r *mux.Router, db *storage.DB) {
 	s := r.PathPrefix("/comments").Subrouter()
 	//get comments list
 	s.HandleFunc("/{postId}", c.postComments).Methods(http.MethodGet, http.MethodOptions)
@@ -30,7 +44,7 @@ func (c *commentsApi) addRoutes(r *mux.Router, db *storage.DB) {
 }
 
 // GET /comments/{postId}
-func (c *commentsApi) postComments(w http.ResponseWriter, r *http.Request) {
+func (c *CommentsApi) postComments(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("GET comments by postId")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	if r.Method == http.MethodOptions {
@@ -52,22 +66,22 @@ func (c *commentsApi) postComments(w http.ResponseWriter, r *http.Request) {
 }
 
 // GET /comments/by/{id}
-func (c *commentsApi) comment(w http.ResponseWriter, r *http.Request) {
+func (c *CommentsApi) comment(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("GET comment by Id")
 	respondWithError(w, http.StatusNotImplemented, "not implemented")
 }
 
 // DELETE /comments/{id}
-func (ca *commentsApi) deleteComment(w http.ResponseWriter, r *http.Request) {
+func (ca *CommentsApi) deleteComment(w http.ResponseWriter, r *http.Request) {
 	respondWithError(w, http.StatusNotImplemented, "not implemented")
 }
 
-func (ca *commentsApi) updateComment(w http.ResponseWriter, r *http.Request) {
+func (ca *CommentsApi) updateComment(w http.ResponseWriter, r *http.Request) {
 	respondWithError(w, http.StatusNotImplemented, "not implemented")
 }
 
 // POST /comments/ - adds comment
-func (ca *commentsApi) addComment(w http.ResponseWriter, r *http.Request) {
+func (ca *CommentsApi) addComment(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("add comment")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	if r.Method == http.MethodOptions {
