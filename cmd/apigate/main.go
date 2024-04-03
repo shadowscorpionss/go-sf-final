@@ -2,33 +2,35 @@ package main
 
 import (
 	"ApiGate/package/api"
-	"ApiGate/package/storage"
 	"log"
 	"net/http"
-	"os"
-	"path/filepath"
-	"runtime"
+
+	"github.com/joho/godotenv"
 )
 
-func main() {
-	// initialization from environment to keep safe your secrets =)
-	connstr := os.Getenv("apigatedb")
+// init вызывается перед main()
+func init() {
 
-	_, exeFilename, _, ok := runtime.Caller(0)
-	if !ok {
-		log.Fatal("unable to get the current filename")
+	// загружает значения из файла .env в систему
+	if err := godotenv.Load(); err != nil {
+		log.Print("No .env file found")
 	}
+}
 
-	homePath := filepath.Dir(exeFilename)
+func main() {
+	var err error
 
-	// --db
-	db, err := storage.New(connstr)
-	if err != nil {
-		log.Fatal(err)
+	// initialization from environment to keep safe your secrets =)
+
+	cfg := api.ApiConfig{
+		PortGate:    8080,
+		PortCensor:  8083,
+		PortComment: 8082,
+		PortNews:    8081,
 	}
 
 	// --api
-	api := api.New(db, homePath)
+	api := api.New(cfg)
 
 	// start http server
 	err = http.ListenAndServe(":8080", api.Router())

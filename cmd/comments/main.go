@@ -1,8 +1,9 @@
 package main
 
 import (
-	"ApiGate/package/api"
+	commentsapi "ApiGate/package/comments_api"
 	"ApiGate/package/storage"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -11,6 +12,7 @@ import (
 func main() {
 	// initialization from environment to keep safe your secrets =)
 	connstr := os.Getenv("commentsdb")
+	port:=os.Getenv("commentsport")
 
 	// --db
 	db, err := storage.New(connstr)
@@ -19,10 +21,10 @@ func main() {
 	}
 
 	// --api
-	api := api.NewCommentsApi(db)
+	api := commentsapi.New(db)
 
 	// start http server
-	err = http.ListenAndServe(":8181", api.Router())
+	err = http.ListenAndServe(fmt.Sprintf(":%s",port), api.Router())
 	if err != nil {
 		log.Fatal(err)
 	}

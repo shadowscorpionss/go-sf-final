@@ -1,4 +1,4 @@
-package api
+package commentsapi
 
 import (
 	"ApiGate/package/models"
@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"ApiGate/package/middleware"
+
 	"github.com/gorilla/mux"
 )
 
@@ -16,7 +18,7 @@ type CommentsApi struct {
 	r  *mux.Router
 }
 
-func NewCommentsApi(db *storage.DB) *CommentsApi {
+func New(db *storage.DB) *CommentsApi {
 	// constructor of API
 	a := CommentsApi{r: mux.NewRouter(), db: db}
 	a.r.StrictSlash(true)
@@ -53,31 +55,31 @@ func (c *CommentsApi) postComments(w http.ResponseWriter, r *http.Request) {
 	sPostId := mux.Vars(r)["postId"]
 	postId, err := strconv.Atoi(sPostId)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid request parameters")
+		middleware.RespondWithError(w, http.StatusBadRequest, "Invalid request parameters")
 		return
 	}
 
 	res, err := c.db.Comments(postId)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error while reading from db: %v", err))
+		middleware.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error while reading from db: %v", err))
 		return
 	}
-	respondWithJSON(w, http.StatusAccepted, res)
+	middleware.RespondWithJSON(w, http.StatusAccepted, res)
 }
 
 // GET /comments/by/{id}
 func (c *CommentsApi) comment(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("GET comment by Id")
-	respondWithError(w, http.StatusNotImplemented, "not implemented")
+	middleware.RespondWithError(w, http.StatusNotImplemented, "not implemented")
 }
 
 // DELETE /comments/{id}
 func (ca *CommentsApi) deleteComment(w http.ResponseWriter, r *http.Request) {
-	respondWithError(w, http.StatusNotImplemented, "not implemented")
+	middleware.RespondWithError(w, http.StatusNotImplemented, "not implemented")
 }
 
 func (ca *CommentsApi) updateComment(w http.ResponseWriter, r *http.Request) {
-	respondWithError(w, http.StatusNotImplemented, "not implemented")
+	middleware.RespondWithError(w, http.StatusNotImplemented, "not implemented")
 }
 
 // POST /comments/ - adds comment
@@ -92,16 +94,16 @@ func (ca *CommentsApi) addComment(w http.ResponseWriter, r *http.Request) {
 
 	var nc models.NewComment
 	if err := decoder.Decode(&nc); err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		middleware.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
 	res, err := ca.db.NewComment(nc)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, fmt.Sprintf("%v", err))
+		middleware.RespondWithError(w, http.StatusBadRequest, fmt.Sprintf("%v", err))
 		return
 	}
 
-	respondWithJSON(w, http.StatusAccepted, res)
+	middleware.RespondWithJSON(w, http.StatusAccepted, res)
 
 }
