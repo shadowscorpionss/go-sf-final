@@ -22,14 +22,14 @@ func main() {
 	var err error
 
 	// initialization from environment to keep safe your secrets =)
-	cfg:=NewConfig()
-	apicfg:=CtoApiConfig(*cfg)
+	cfg := NewConfig()
+	apicfg := CtoApiConfig(*cfg)
 
 	// --api
 	api := api.New(*apicfg)
 
 	// start http server
-	err = http.ListenAndServe(fmt.Sprintf(":%d", apicfg.GatewayPort), api.Router())
+	err = http.ListenAndServe(fmt.Sprintf("%s:%d", apicfg.Gateway.Host, apicfg.Gateway.Port), api.Router())
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -7,23 +7,14 @@ import (
 )
 
 type Config struct {
-	Censor   Censor
-	Comments Comments
-	News     News
+	Censor   ServiceConfig
+	Comments ServiceConfig
+	News     ServiceConfig
 	Gateway  Gateway
 }
 
-type Censor struct {
-	AdrPort string
-	URLdb   string
-}
-
-type Comments struct {
-	AdrPort string
-	URLdb   string
-}
-
-type News struct {
+type ServiceConfig struct {
+	Host    string
 	AdrPort string
 	URLdb   string
 }
@@ -36,15 +27,18 @@ type Gateway struct {
 func NewConfig() *Config {
 	return &Config{
 
-		Censor: Censor{
+		Censor: ServiceConfig{
+			Host:    getEnv("CENSOR_HOST", "localhost"),
 			AdrPort: getEnv("CENSOR_PORT", "8083"),
 			URLdb:   getEnv("CENSOR_DB", ""),
 		},
-		Comments: Comments{
+		Comments: ServiceConfig{
+			Host:    getEnv("COMMENTS_HOST", "localhost"),
 			AdrPort: getEnv("COMMENTS_PORT", "8082"),
 			URLdb:   getEnv("COMMENTS_DB", ""),
 		},
-		News: News{
+		News: ServiceConfig{
+			Host:    getEnv("NEWS_HOST", "localhost"),
 			AdrPort: getEnv("NEWS_PORT", "8081"),
 			URLdb:   getEnv("NEWS_DB", ""),
 		},
@@ -56,10 +50,22 @@ func NewConfig() *Config {
 
 func CtoApiConfig(c Config) *api.ApiGatewayConfig {
 	apicfg := api.ApiGatewayConfig{
-		GatewayPort:  stoid(c.Gateway.AdrPort, 8080),
-		CensorPort:   stoid(c.Censor.AdrPort, 8083),
-		CommentsPort: stoid(c.Comments.AdrPort, 8082),
-		NewsPort:     stoid(c.News.AdrPort, 8081),
+		Gateway: api.HostConfig{
+			Host: "localhost",
+			Port: stoid(c.Gateway.AdrPort, 8080),
+		},
+		Censor: api.HostConfig{
+			Host: c.Censor.Host,
+			Port: stoid(c.Censor.AdrPort, 8083),
+		},
+		Comments: api.HostConfig{
+			Host: c.Comments.Host,
+			Port: stoid(c.Comments.AdrPort, 8082),
+		},
+		News: api.HostConfig{
+			Host: c.News.Host,
+			Port: stoid(c.News.AdrPort, 8081),
+		},
 	}
 	return &apicfg
 }
