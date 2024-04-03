@@ -1,8 +1,8 @@
 package api
 
-type ApiConfig struct {
-	PortGate    int
-	PortCensor  int
-	PortComment int
-	PortNews    int
+type ApiGatewayConfig struct {
+	GatewayPort  int
+	CensorPort   int
+	CommentsPort int
+	NewsPort     int
 }

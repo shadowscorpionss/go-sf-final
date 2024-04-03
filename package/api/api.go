@@ -13,18 +13,17 @@ import (
 )
 
 type API struct {
-	r *mux.Router
-	portCensor string
+	r           *mux.Router
+	portCensor  string
 	portComment string
-	
 }
 
 // constructor of API
-func New(cfg ApiConfig) *API {
+func New(cfg ApiGatewayConfig) *API {
 	a := API{r: mux.NewRouter()}
-	
-	a.portCensor=strconv.Itoa(cfg.PortCensor)
-	a.portComment=strconv.Itoa(cfg.PortComment)
+
+	a.portCensor = strconv.Itoa(cfg.CensorPort)
+	a.portComment = strconv.Itoa(cfg.CommentsPort)
 
 	a.r.StrictSlash(true)
 	a.endpoints()

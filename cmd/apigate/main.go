@@ -2,6 +2,7 @@ package main
 
 import (
 	"ApiGate/package/api"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -21,19 +22,14 @@ func main() {
 	var err error
 
 	// initialization from environment to keep safe your secrets =)
-
-	cfg := api.ApiConfig{
-		PortGate:    8080,
-		PortCensor:  8083,
-		PortComment: 8082,
-		PortNews:    8081,
-	}
+	cfg:=NewConfig()
+	apicfg:=CtoApiConfig(*cfg)
 
 	// --api
-	api := api.New(cfg)
+	api := api.New(*apicfg)
 
 	// start http server
-	err = http.ListenAndServe(":8080", api.Router())
+	err = http.ListenAndServe(fmt.Sprintf(":%d", apicfg.GatewayPort), api.Router())
 	if err != nil {
 		log.Fatal(err)
 	}
