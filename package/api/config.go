@@ -1,6 +1,9 @@
 package api
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type ApiGatewayConfig struct {
 	Gateway  HostConfig
@@ -14,7 +17,26 @@ type HostConfig struct {
 	Port int
 }
 
+func HttpBaseUrl(cfg HostConfig) string {
+	return fmt.Sprintf("http://%s:%d/", cfg.Host, cfg.Port)
+}
 
-func NewEndpointConfig(cfg HostConfig, controller, method string) string {
-	return fmt.Sprintf("http://%s:%d/%s/%s", cfg.Host, cfg.Port, controller, method)
+func ControllerUrl(hostBaseUrl, controller string) string {
+	return fmt.Sprintf("%s/%s", hostBaseUrl, strings.TrimLeft(controller, "/"))
+}
+
+func MethodUrl(controllerUrl, method string) string {
+	return ControllerUrl(controllerUrl, method)
+}
+
+func QueryUrl(controlerUrl string, queryParams map[string]string) string {
+	queryStrs := []string{}
+	for k, v := range queryParams {
+		queryStrs = append(queryStrs, fmt.Sprintf("%s=%s", k, v))
+	}
+	query := strings.Join(queryStrs, "&")
+	if len(query) == 0 {
+		return controlerUrl
+	}
+	return fmt.Sprintf("%s?%s", controlerUrl, query)
 }

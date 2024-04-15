@@ -4,9 +4,7 @@ import (
 	"ApiGate/package/middleware"
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -16,21 +14,33 @@ import (
 )
 
 type API struct {
-	r       *mux.Router
-	cens    string
-	coms    string
-	nws     string
-	comBase string
+	r         *mux.Router
+	censContr string
+	comBase   string
+	comContr  string
+	newsBase  string
+	newsContr string
+	newsSrch  string
 }
+
+const (
+	NEWS_PATH        = "/news"
+	NEWS_SEARCH_PATH = NEWS_PATH + "/search"
+	NEWS_LATEST_PATH = NEWS_PATH + "/latest"
+	COMMENTS_PATH    = "/comments"
+	CENSOR_PATH      = "/censor"
+)
 
 // constructor of API
 func New(cfg ApiGatewayConfig) *API {
-	a := API{r: mux.NewRouter(),
-		cens:    NewEndpointConfig(cfg.Censor, "censor", ""),
-		coms:    NewEndpointConfig(cfg.Comments, "comments", ""),
-		nws:     NewEndpointConfig(cfg.News, "news", "search"),
-		comBase: fmt.Sprintf("%s:%d", cfg.Comments.Host, cfg.Comments.Port),
-	}
+
+	a := API{r: mux.NewRouter()}
+	a.comBase = HttpBaseUrl(cfg.Comments)
+	a.newsBase = HttpBaseUrl(cfg.News)
+	a.censContr = ControllerUrl(HttpBaseUrl(cfg.Censor), CENSOR_PATH)
+	a.comContr = ControllerUrl(a.comBase, COMMENTS_PATH)
+	a.newsContr = ControllerUrl(a.newsBase, NEWS_PATH)
+	a.newsSrch = ControllerUrl(a.newsBase, NEWS_SEARCH_PATH)
 
 	a.r.StrictSlash(true)
 	a.addRoutes()
@@ -44,11 +54,11 @@ func (api *API) Router() *mux.Router {
 
 // register addRoutes
 func (api *API) addRoutes() {
-	api.r.HandleFunc("/news", api.news).Methods(http.MethodGet, http.MethodOptions)
-	api.r.HandleFunc("/news/latest", api.newsLatest).Methods(http.MethodGet, http.MethodOptions)
-	api.r.HandleFunc("/news/search", api.newsSearch).Methods(http.MethodGet, http.MethodOptions)
-	api.r.HandleFunc("/comments", api.addComment).Methods(http.MethodPost, http.MethodOptions)
-	api.r.HandleFunc("/comments/{id}", api.deleteComment).Methods(http.MethodDelete, http.MethodOptions)
+	api.r.HandleFunc(NEWS_PATH, api.news).Methods(http.MethodGet, http.MethodOptions)
+	api.r.HandleFunc(NEWS_LATEST_PATH, api.newsLatest).Methods(http.MethodGet, http.MethodOptions)
+	api.r.HandleFunc(NEWS_SEARCH_PATH, api.newsSearch).Methods(http.MethodGet, http.MethodOptions)
+	api.r.HandleFunc(COMMENTS_PATH, api.addComment).Methods(http.MethodPost, http.MethodOptions)
+	api.r.HandleFunc(COMMENTS_PATH+"/{id}", api.deleteComment).Methods(http.MethodDelete, http.MethodOptions)
 
 }
 
@@ -58,11 +68,12 @@ func (api *API) news(w http.ResponseWriter, r *http.Request) {
 
 // GET /news/latest
 func (api *API) newsLatest(w http.ResponseWriter, r *http.Request) {
+
 }
 
 // GET /news/search
 func (api *API) newsSearch(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/news/search" {
+	if r.URL.Path != NEWS_SEARCH_PATH {
 		http.NotFound(w, r)
 	}
 
@@ -79,18 +90,18 @@ func (api *API) newsSearch(w http.ResponseWriter, r *http.Request) {
 	var wg sync.WaitGroup
 	wg.Add(2)
 
+	//calling news microservice
 	go func() {
 		defer wg.Done()
-		// Отправляем запрос на порт 8081
-		resp1, err := http.Get("http://localhost" + portNews + "/news/search" + "?id=" + idParam)
+		resp1, err := http.Get(QueryUrl(api.newsSrch, map[string]string{"id": idParam}))
 		chErr <- err
 		chNews <- resp1
 	}()
 
+	//calling comments microservice
 	go func() {
 		defer wg.Done()
-		// Отправляем запрос на порт 8082
-		resp2, err := http.Get("http://localhost" + portComment + "/comments" + "?news_id=" + idParam)
+		resp2, err := http.Get(QueryUrl(api.comContr, map[string]string{"news_id": idParam}))
 		chErr <- err
 		chComments <- resp2
 	}()
@@ -109,14 +120,14 @@ block:
 	for {
 		select {
 		case respNews := <-chNews:
-			body, err := ioutil.ReadAll(respNews.Body)
+			body, err := io.ReadAll(respNews.Body)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 			_ = json.Unmarshal(body, &response.NewsDetailed)
 		case respComment := <-chComments:
-			body, err := ioutil.ReadAll(respComment.Body)
+			body, err := io.ReadAll(respComment.Body)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -137,7 +148,7 @@ block:
 
 // POST /comments
 func (api *API) addComment(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/comments" {
+	if r.URL.Path != COMMENTS_PATH {
 		http.NotFound(w, r)
 	}
 	//reading request body
@@ -146,7 +157,7 @@ func (api *API) addComment(w http.ResponseWriter, r *http.Request) {
 
 	//sending to check to censor service
 	censorBody := io.NopCloser(bytes.NewBuffer(bodyBytes))
-	respCensor, err := middleware.MakeRequest(r, http.MethodPost, api.cens, censorBody)
+	respCensor, err := middleware.MakeRequest(r, http.MethodPost, api.censContr, censorBody)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -158,7 +169,7 @@ func (api *API) addComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	commentBody := io.NopCloser(bytes.NewBuffer(bodyBytes))
-	resp, err := middleware.MakeRequest(r, http.MethodPost, api.coms, commentBody)
+	resp, err := middleware.MakeRequest(r, http.MethodPost, api.comContr, commentBody)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -173,14 +184,14 @@ func (api *API) addComment(w http.ResponseWriter, r *http.Request) {
 
 // DELETE /comments
 func (api *API) deleteComment(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/comments" {
+	if r.URL.Path != COMMENTS_PATH {
 		http.NotFound(w, r)
 	}
 
 	// proxy to microservice
 	proxy := httputil.NewSingleHostReverseProxy(&url.URL{
 		Scheme: "http",
-		Host:   api.comBase, // microservice
+		Host:   api.comBase,
 	})
 
 	// proxy
